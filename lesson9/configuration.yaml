@@ -1,0 +1,8 @@
+---
+Port: 9000
+DbUrl: postgres://db-user:db-password@petstore-db:5432/petstore?sslmode=disable
+JaegerUrl: http://jaeger:16686
+SentryUrl: http://sentry:9000
+KafkaBroker: kafka:9092
+AppId: user
+AppKey: userrr
