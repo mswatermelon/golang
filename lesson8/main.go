@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 
@@ -13,5 +14,10 @@ func main() {
 		fmt.Println("Error happend during reading config:", err)
 		os.Exit(0)
 	}
-	fmt.Printf("%+v\n", config)
+	preparedConfig, err := json.MarshalIndent(config, "", "  ")
+	if err != nil {
+		fmt.Println("Error happend during printing config:", err)
+		os.Exit(0)
+	}
+	fmt.Println(string(preparedConfig))
 }

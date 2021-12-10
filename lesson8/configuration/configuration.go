@@ -4,26 +4,57 @@ import (
 	"fmt"
 	"net/url"
 	"path/filepath"
-	"strconv"
 
 	"github.com/joho/godotenv"
 	"github.com/namsral/flag"
 )
 
 type Config struct {
-	port        int
-	dbUrl       string
-	jaegerUrl   string
-	sentryUrl   string
-	kafkaBroker string
-	appId       string
-	appKey      string
+	Port        int    `json:"Port"`
+	DbUrl       string `json:"DbUrl"`
+	JaegerUrl   string `json:"JaegerUrl"`
+	SentryUrl   string `json:"SentryUrl"`
+	KafkaBroker string `json:"KafkaBroker"`
+	AppId       string `json:"AppId"`
+	AppKey      string `json:"AppKey"`
+}
+
+func (config *Config) validate() error {
+	if err := validateURI(config.DbUrl); err != nil {
+		return fmt.Errorf("Error while parsing\"DbUrl\"", err)
+	}
+	if err := validateURI(config.JaegerUrl); err != nil {
+		return fmt.Errorf("Error while parsing\"JaegerUrl\"", err)
+	}
+	if err := validateURI(config.SentryUrl); err != nil {
+		return fmt.Errorf("Error while parsing\"SentryUrl\"", err)
+	}
+	if err := validatePort(config.Port); err != nil {
+		return fmt.Errorf("Error while parsing \"Port\"", err)
+	}
+
+	return nil
+}
+
+func (config *Config) fillConfig() error {
+	flag.IntVar(&config.Port, "port", 0, "Port")
+	flag.StringVar(&config.DbUrl, "db_url", "", "Database URL")
+	flag.StringVar(&config.JaegerUrl, "jaeger_url", "", "Jaeger URL")
+	flag.StringVar(&config.SentryUrl, "sentry_url", "", "Sentry URL")
+	flag.StringVar(&config.KafkaBroker, "kafka_broker", "", "Kafka broker")
+	flag.StringVar(&config.AppId, "app_id", "", "Application identificator")
+	flag.StringVar(&config.AppKey, "app_key", "", "Application key")
+	flag.Parse()
+	if err := config.validate(); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func loadFile(fileName string) error {
 	if err := godotenv.Load(fileName); err != nil {
-		fmt.Println("Error while loading file", fileName)
-		return err
+		return fmt.Errorf("Error while loading file", fileName, err)
 	}
 
 	return nil
@@ -37,34 +68,12 @@ func validateURI(value string) error {
 	return nil
 }
 
-func validate(config *Config) {
-	if err := validateURI(config.dbUrl); err != nil {
-		fmt.Println("Error while parsing\"", err, "\"")
-	}
-	if err := validateURI(config.jaegerUrl); err != nil {
-		fmt.Println("Error while parsing\"", err, "\"")
-	}
-	if err := validateURI(config.sentryUrl); err != nil {
-		fmt.Println("Error while parsing\"", err, "\"")
+func validatePort(value int) error {
+	if value < 1 || value > 65535 {
+		return fmt.Errorf("%s not within range of valid ports (1-65535)", value)
 	}
 
-	for _, b := range strconv.Itoa(config.port) {
-		if b < '0' || b > '9' {
-			fmt.Println("Error while parsing \"port\"")
-		}
-	}
-}
-
-func parseConfig(config *Config) {
-	flag.IntVar(&config.port, "port", 0, "Port")
-	flag.StringVar(&config.dbUrl, "db_url", "", "Database URL")
-	flag.StringVar(&config.jaegerUrl, "jaeger_url", "", "Jaeger URL")
-	flag.StringVar(&config.sentryUrl, "sentry_url", "", "Sentry URL")
-	flag.StringVar(&config.kafkaBroker, "kafka_broker", "", "Kafka broker")
-	flag.StringVar(&config.appId, "app_id", "", "Application identificator")
-	flag.StringVar(&config.appKey, "app_key", "", "Application key")
-	flag.Parse()
-	validate(config)
+	return nil
 }
 
 func LoadConfig(fileName string) (config Config, err error) {
@@ -72,17 +81,16 @@ func LoadConfig(fileName string) (config Config, err error) {
 		return config, err
 	}
 
-	parseConfig(&config)
+	if err := config.fillConfig(); err != nil {
+		fmt.Println("Error happened while loading config", err)
+		return config, err
+	}
 
 	return config, nil
 }
 
-func LoadEnvFiles(fileName string) (config Config, err error) {
-	if err = loadFile(fileName); err != nil {
-		return config, err
-	}
-
-	matches, err := filepath.Glob("*.env")
+func LoadEnvFiles(pattern string) (config Config, err error) {
+	matches, err := filepath.Glob(pattern)
 
 	if err != nil {
 		fmt.Println("Error while finding enironment files")
@@ -94,7 +102,10 @@ func LoadEnvFiles(fileName string) (config Config, err error) {
 		return config, err
 	}
 
-	parseConfig(&config)
+	if err := config.fillConfig(); err != nil {
+		fmt.Println("Error happened while loading config", err)
+		return config, err
+	}
 
 	return config, nil
 }
