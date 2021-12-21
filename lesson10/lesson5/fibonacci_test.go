@@ -4,6 +4,8 @@ import (
 	. "gb/lesson10/lesson5/fib_calculator"
 	"math/rand"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestCalcFibonacciValueZero(t *testing.T) {
@@ -52,3 +54,16 @@ func BenchmarkCalcFibonacciValue(b *testing.B) {
 		CalcFibonacciValue(int64(i), fibNumber)
 	}
 }
+
+// testify
+func TestCalcFibonacciValueWithPack(t *testing.T) {
+	var fibNumber FibCache = make(FibCache)
+	result := CalcFibonacciValue(0, fibNumber)
+	// assert equality
+	assert.Equal(t, result, int64(0), "Fibonacci(0) expected to be 0, but received %d", result)
+}
+
+// Удобно, что предусмотрен вывод ошибок и даже с аргументами
+// Получается два действия - сравнение и вывод ошибки объеденены в одно
+// Удобно, что код в месте проверки будет единообразен, намного легче найти место,
+// где это происходит среди вычислений
